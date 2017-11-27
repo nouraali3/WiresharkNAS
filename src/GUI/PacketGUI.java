@@ -1,20 +1,25 @@
-package wireshark;
+package GUI;
 
 import java.awt.Color;
 import javax.swing.JOptionPane;
 import jpcap.NetworkInterface;
 import Datatypes.PacketOptions;
+import jpcap.packet.Packet;
 
 public class PacketGUI extends javax.swing.JFrame {
     
+   
     int index=1;
     NetworkInterface networkInterface;
-    PacketOptions p;
-    boolean stop=false;
-    
+    PacketOptions packets;
+    Packet p;
+    boolean stopIsPressed=false;
+
+  
     public PacketGUI(int i,NetworkInterface ni) {
         initComponents();
         networkInterface=ni;
+        packets=new PacketOptions(networkInterface,this);
         index=i;
         Integer i1=i;
         interfacetxt.setText("interface "+i1.toString());
@@ -234,8 +239,12 @@ public class PacketGUI extends javax.swing.JFrame {
 
     private void capbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_capbtnActionPerformed
         System.out.println("Started capturing");
-        p=new PacketOptions(networkInterface);
-        p.capture();
+//        while(!stopIsPressed)
+//        {
+            packets.capture();
+//            printPacket();
+//        }
+        
     }//GEN-LAST:event_capbtnActionPerformed
 
     private void interfacespnlMouseEntered(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_interfacespnlMouseEntered
@@ -245,7 +254,17 @@ public class PacketGUI extends javax.swing.JFrame {
     private void interfacespnlMouseExited(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_interfacespnlMouseExited
         interfacespnl.setBackground(new Color(227,222,250));
     }//GEN-LAST:event_interfacespnlMouseExited
+    public void appendProtocolsTxt(String s)
+    {
+         protocolstxt.append(s);
+    }
+    
+    private void printPacket() 
+    {
+         protocolstxt.append(p.toString()+"\n");
+    }
 
+    
     private void interfacespnlMouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_interfacespnlMouseClicked
         
         //jOptionPane returns 0=>yes  1=>no -1=>closed box 
@@ -263,7 +282,13 @@ public class PacketGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_interfacespnlAncestorAdded
 
     private void stopbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stopbtnActionPerformed
-        p.stop();
+        int n = JOptionPane.showConfirmDialog(this,"Are you sure you want to close?","An Inane Question",JOptionPane.YES_NO_OPTION);
+        if(n==0)
+        {
+//            stopIsPressed=true;
+            packets.stopCapturing();
+        }
+            
     }//GEN-LAST:event_stopbtnActionPerformed
 
     
@@ -286,10 +311,11 @@ public class PacketGUI extends javax.swing.JFrame {
     private javax.swing.JButton loadbtn;
     public static javax.swing.JTextArea packetcontenttxt;
     public static javax.swing.JTable packetstbl;
-    public static javax.swing.JTextArea protocolstxt;
+    private javax.swing.JTextArea protocolstxt;
     private javax.swing.JButton savebtn;
     private javax.swing.JButton stopbtn;
     // End of variables declaration//GEN-END:variables
 
+    
     
 }

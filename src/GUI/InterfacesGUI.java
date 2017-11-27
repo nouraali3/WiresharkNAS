@@ -1,5 +1,5 @@
 
-package wireshark;
+package GUI;
 
 import javax.swing.table.DefaultTableModel;
 import jpcap.JpcapCaptor;

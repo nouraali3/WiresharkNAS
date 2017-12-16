@@ -2,6 +2,7 @@
 package Datatypes;
 
 import GUI.PacketGUI;
+import java.util.Date;
 import org.jnetpcap.nio.JBuffer;
 import org.jnetpcap.packet.Payload;
 import org.jnetpcap.packet.PcapPacket;
@@ -92,8 +93,9 @@ public class MyPacket{
         
     }
     
-    public void printToPacketGUI(PacketGUI pgui, PcapPacket p, long t)
+    public void printToPacketGUI(PacketGUI pgui, PcapPacket p)
     {
+        Date date = new Date(p.getCaptureHeader().timestampInMillis());
         gui=pgui;
         Ethernet ethernet=new Ethernet();
         Arp arp=new Arp();
@@ -107,8 +109,8 @@ public class MyPacket{
         String src=new String(),dest=new String(),protocol=new String() ; 
         byte[] tempByte= new byte[4]; StringBuilder sb=new StringBuilder();
         JBuffer payloadBuffer = new JBuffer(4);
-
-        String time=Long.toString(t);
+        
+        String time=Long.toString(date.getTime());
         if(p.hasHeader(ethernet))
         {
             protocol="ethernet";
@@ -199,11 +201,5 @@ public class MyPacket{
         gui.insertInPacketTable(num,time,src,dest,protocol,len,info,payload);
         number++;
     }
-        
 
-    
-    
-
-    
-    
 }

@@ -32,15 +32,7 @@ public class PacketGUI extends javax.swing.JFrame {
     WorkingThread wt;
     MyPacket myPacket;
     Packet p;
-  
-//    public PacketGUI(int i,NetworkInterface ni) {
-//        initComponents();
-//        networkInterface=ni;
-//        wt=new WorkingThread(networkInterface,this);
-//        index=i;
-//        Integer i1=i;
-//        interfacetxt.setText("interface "+i1.toString());
-//    }
+
     
     public PacketGUI(int i,PcapIf ni,StringBuilder errbuf) {
         initComponents();
@@ -333,14 +325,6 @@ public class PacketGUI extends javax.swing.JFrame {
         protocolstxt.append(s);
     }
      
-//     public void insertInPacketTable(MyPacket myP) 
-//     {
-//        myPacket=myP;
-//        Object o=new Object();
-//        o=myPacket;
-//        DefaultTableModel dtm=(DefaultTableModel) packetstbl.getModel();
-//        dtm.addRow(new Object[]{num,time,src,dest,protocol,len,info,data1});
-//     }
 
      public void insertInPacketTable(String num, String time, String src, String dest, String protocol, String len, String info, String data1) 
      {
@@ -383,13 +367,19 @@ public class PacketGUI extends javax.swing.JFrame {
     private void showbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_showbtnActionPerformed
         packetcontenttxt.setText("");
         DefaultTableModel dtm=(DefaultTableModel) packetstbl.getModel();
-        int indexInTable=packetstbl.getSelectedRow();
-        String packetInfo=dtm.getValueAt(indexInTable, 6).toString();
-        protocolstxt.setText(packetInfo);
-        String data=dtm.getValueAt(indexInTable, 7).toString();
-        packetcontenttxt.setText(data);
-        
-
+        try 
+        {
+            int indexInTable=packetstbl.getSelectedRow();
+            String packetInfo=dtm.getValueAt(indexInTable, 6).toString();
+            protocolstxt.setText(packetInfo);
+            String data=dtm.getValueAt(indexInTable, 7).toString();
+            packetcontenttxt.setText(data); 
+        } 
+        catch (ArrayIndexOutOfBoundsException e)
+        {
+            JOptionPane.showMessageDialog(this, "please select a packet first");
+        }
+ 
     }//GEN-LAST:event_showbtnActionPerformed
 
     private void filterbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_filterbtnActionPerformed
@@ -454,20 +444,20 @@ public class PacketGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_savebtnActionPerformed
 
     private void loadbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadbtnActionPerformed
-//        StringBuilder errbuf = new StringBuilder();  
-//        Pcap pcap = Pcap.openOffline("tests/test-afs.pcap", errbuf);  
-//
-//        PcapPacketHandler<String> handler = new PcapPacketHandler<String>() 
-//        {  
-//            public void nextPacket(PcapPacket packet, String user) 
-//            {  
-//                
-//            }  
-//        }  
+        StringBuilder errbuf = new StringBuilder();  
+        Pcap pcap = Pcap.openOffline("udp-wireshark-trace.pcap", errbuf);  
 
-//        pcap.loop(10, handler, "jNetPcap rocks!");  
-//
-//        pcap.close();  
+        PcapPacketHandler<String> handler = new PcapPacketHandler<String>() 
+        {  
+            public void nextPacket(PcapPacket packet, String user) 
+            {  
+                myPacket.printToPacketGUI(PacketGUI.this, packet);
+            }  
+        };
+
+        pcap.loop(1, handler, "jNetPcap rocks!");  
+
+        pcap.close();  
     }//GEN-LAST:event_loadbtnActionPerformed
 
     private void exitbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_exitbtnActionPerformed

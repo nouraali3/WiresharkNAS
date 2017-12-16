@@ -1,14 +1,18 @@
 
 package GUI;
 
+import java.awt.List;
+import java.util.ArrayList;
+import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
-import jpcap.JpcapCaptor;
-import jpcap.NetworkInterface;
-import jpcap.NetworkInterfaceAddress;
+import org.jnetpcap.*;
+
 
 public class InterfacesGUI extends javax.swing.JFrame {
 
-    public NetworkInterface[] NI;
+//    public NetworkInterface[] NI; //interfaces provided by jpcap lib
+    ArrayList<PcapIf> alldevs = new ArrayList<PcapIf>();//interfaces provided by jnetpcap lib
+    StringBuilder errbuf = new StringBuilder(); // For any error msgs
     int index=1;
     
     public InterfacesGUI() {
@@ -16,21 +20,52 @@ public class InterfacesGUI extends javax.swing.JFrame {
         DisplayInterfaces();
     }
 
-   public void DisplayInterfaces()
-    { 
-        DefaultTableModel dtm= (DefaultTableModel)interfacestbl.getModel();
-       
-        NI=JpcapCaptor.getDeviceList();
-        for (int i=0;i<NI.length;i++)
+//   public void DisplayInterfaces()
+//    { 
+//        DefaultTableModel dtm= (DefaultTableModel)interfacestbl.getModel();
+//
+//        NI=JpcapCaptor.getDeviceList();
+//        for (int i=0;i<NI.length;i++)
+//        {
+//            Integer interfaceNumber=i;
+//            String interfaceDescription= NI[i].description ;
+//            String datalinkDescription=NI[i].datalink_description;
+//            NetworkInterfaceAddress[] addresses = NI[i].addresses; //returns 3 addresses { ip , subnet , broadcast }
+//            String IPAddress=addresses[0].address.toString();
+//            dtm.addRow(new Object[]{Integer.toString(interfaceNumber),interfaceDescription,datalinkDescription,IPAddress});
+//        }
+//    }
+    
+    public void DisplayInterfaces()
+    {
+ 
+        DefaultTableModel dtm = (DefaultTableModel) interfacestbl.getModel();
+        
+        try 
+            {int r = Pcap.findAllDevs(alldevs, errbuf);} 
+        catch (Exception e) 
+            { JOptionPane.showMessageDialog(this, errbuf); return; }
+
+        if (alldevs.isEmpty()) 
         {
-            Integer interfaceNumber=i;
-            String interfaceDescription= NI[i].description ;
-            String datalinkDescription=NI[i].datalink_description;
-            NetworkInterfaceAddress[] addresses = NI[i].addresses; //returns 3 addresses { ip , subnet , broadcast }
-            String IPAddress=addresses[0].address.toString();
-            dtm.addRow(new Object[]{Integer.toString(interfaceNumber),interfaceDescription,datalinkDescription,IPAddress});
         }
+
+        int i = 0;
+        for (PcapIf device : alldevs) 
+        {
+            Integer interfaceNumber = i;
+            String interfaceDescription = device.getDescription();
+            String datalinkDescription = device.getName();
+            ArrayList<PcapAddr> addresses = (ArrayList<PcapAddr>) device.getAddresses();
+            String IPAddress = addresses.get(0).getAddr().toString();
+            dtm.addRow(new Object[]{Integer.toString(interfaceNumber), interfaceDescription, datalinkDescription, IPAddress});
+            i++;
+        }
+
     }
+    
+                
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -103,9 +138,19 @@ public class InterfacesGUI extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void okbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_okbtnActionPerformed
-        index=interfacestbl.getSelectedRow();
-        this.setVisible(false);
-        new PacketGUI(index,NI[index]).setVisible(true);
+        try 
+        {
+            index=interfacestbl.getSelectedRow();
+            this.setVisible(false);
+    //            new PacketGUI(index,NI[index]).setVisible(true);
+            new PacketGUI(index,alldevs.get(index),errbuf).setVisible(true);
+        } 
+        catch (ArrayIndexOutOfBoundsException e1) 
+        {
+            JOptionPane.showMessageDialog(this, "please select an interface");
+            this.setVisible(true);
+        }
+
     }//GEN-LAST:event_okbtnActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

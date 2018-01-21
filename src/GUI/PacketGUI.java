@@ -2,37 +2,32 @@ package GUI;
 
 import java.awt.Color;
 import javax.swing.JOptionPane;
-import jpcap.NetworkInterface;
-import Datatypes.MyPacket;
 import Datatypes.WorkingThread;
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.util.LinkedList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.Date;
 import javax.swing.table.DefaultTableModel;
-import jpcap.packet.Packet;
 import org.jnetpcap.Pcap;
 import org.jnetpcap.PcapIf;
+import org.jnetpcap.nio.JBuffer;
+import org.jnetpcap.packet.Payload;
 import org.jnetpcap.packet.PcapPacket;
 import org.jnetpcap.packet.PcapPacketHandler;
+import org.jnetpcap.protocol.lan.Ethernet;
+import org.jnetpcap.protocol.network.Arp;
+import org.jnetpcap.protocol.network.Ip4;
+import org.jnetpcap.protocol.tcpip.Http;
+import org.jnetpcap.protocol.tcpip.Tcp;
+import org.jnetpcap.protocol.tcpip.Udp;
 
 
 public class PacketGUI extends javax.swing.JFrame {
     
     int index=1;
-    NetworkInterface networkInterface;
     PcapIf networkInterface2;
     WorkingThread wt;
-    MyPacket myPacket;
-    Packet p;
-
+    File capturedPacketsFile;
+    boolean isCapturing;
+    int number=1;
     
     public PacketGUI(int i,PcapIf ni,StringBuilder errbuf) {
         initComponents();
@@ -41,6 +36,7 @@ public class PacketGUI extends javax.swing.JFrame {
         index=i;
         Integer i1=i;
         interfacetxt.setText("interface "+i1.toString());
+        isCapturing=false;
     }
 
     @SuppressWarnings("unchecked")
@@ -97,6 +93,11 @@ public class PacketGUI extends javax.swing.JFrame {
         jLabel1.setText("Filter");
 
         filterbox.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ip", "protocol", "length" }));
+        filterbox.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                filterboxActionPerformed(evt);
+            }
+        });
 
         filterbtn.setText("ok");
         filterbtn.addActionListener(new java.awt.event.ActionListener() {
@@ -281,16 +282,19 @@ public class PacketGUI extends javax.swing.JFrame {
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(7, 7, 7)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(interfacespnl, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(stopbtn)
-                        .addComponent(savebtn)
-                        .addComponent(loadbtn)
-                        .addComponent(capbtn)
-                        .addComponent(exitbtn)))
-                .addGap(18, 18, 18)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addGap(23, 23, 23)
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(stopbtn)
+                            .addComponent(savebtn)
+                            .addComponent(loadbtn)
+                            .addComponent(capbtn)
+                            .addComponent(exitbtn)))
+                    .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(interfacespnl, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jLabel5)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -301,12 +305,12 @@ public class PacketGUI extends javax.swing.JFrame {
                 .addGap(18, 18, 18)
                 .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 14, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 159, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 149, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jLabel4)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGap(1, 1, 1)
                 .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 180, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(27, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         pack();
@@ -317,7 +321,7 @@ public class PacketGUI extends javax.swing.JFrame {
         
         System.out.println("Started capturing");
         wt.start();
-      
+        isCapturing=true;
     }//GEN-LAST:event_capbtnActionPerformed
 
     public void appendProtocolsTxt(String s)
@@ -326,11 +330,7 @@ public class PacketGUI extends javax.swing.JFrame {
     }
      
 
-     public void insertInPacketTable(String num, String time, String src, String dest, String protocol, String len, String info, String data1) 
-     {
-        DefaultTableModel dtm=(DefaultTableModel) packetstbl.getModel();
-        dtm.addRow(new Object[]{num,time,src,dest,protocol,len,info,data1});
-     }
+     
     
     private void interfacespnlMouseEntered(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_interfacespnlMouseEntered
         interfacespnl.setBackground(new Color(255,186,241));
@@ -359,9 +359,9 @@ public class PacketGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_interfacespnlAncestorAdded
 
     private void stopbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_stopbtnActionPerformed
-        int n = JOptionPane.showConfirmDialog(this,"Are you sure you want to close?","An Inane Question",JOptionPane.YES_NO_OPTION);
+        int n = JOptionPane.showConfirmDialog(this,"Are you sure you want to stop?","An Inane Question",JOptionPane.YES_NO_OPTION);
         if(n==0)
-            wt.terminate();
+            {wt.terminate(); isCapturing=false; }
     }//GEN-LAST:event_stopbtnActionPerformed
 
     private void showbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_showbtnActionPerformed
@@ -387,6 +387,7 @@ public class PacketGUI extends javax.swing.JFrame {
         DefaultTableModel dtm=(DefaultTableModel) packetstbl.getModel();
         String filterChoice=(String)filterbox.getSelectedItem();
         String filterValue=filtertxt.getText();
+        filtertxt.setText("");
         if (!filterValue.equals(""))
             {
                 int i=0;
@@ -394,9 +395,9 @@ public class PacketGUI extends javax.swing.JFrame {
                 {
                     while(i < dtm.getRowCount()) 
                     {
-                        String currentS=(String)dtm.getValueAt(i, 2);
-                        String currentD=(String)dtm.getValueAt(i, 3);
-                        if (currentS.equalsIgnoreCase(filterValue ) || currentD.equalsIgnoreCase(filterValue ) )
+                        String src=(String)dtm.getValueAt(i, 2);
+                        String destination=(String)dtm.getValueAt(i, 3);
+                        if (src.equalsIgnoreCase(filterValue ) || destination.equalsIgnoreCase(filterValue ) )
                         {
                             i++;
                             continue;
@@ -409,13 +410,14 @@ public class PacketGUI extends javax.swing.JFrame {
                 {
                     while(i < dtm.getRowCount()) 
                     {
-                        String currentProtocol=(String)dtm.getValueAt(i, 4);
-                        if (currentProtocol.equalsIgnoreCase(filterValue ))
+                        String protocol=(String)dtm.getValueAt(i, 4);
+                        if (protocol.equalsIgnoreCase(filterValue )) //if row holds the value we want, just keep that row and go to the next one
                         {
                             i++;
                             continue;
                         }
-                        dtm.removeRow(i);
+                        else
+                            dtm.removeRow(i);
                     }
                 }
                 
@@ -434,56 +436,201 @@ public class PacketGUI extends javax.swing.JFrame {
                 }    
             }
             else
-                JOptionPane.showMessageDialog(this,"please enter the ip address or protocol name");
+                JOptionPane.showMessageDialog(this,"please write a value");
         
     }//GEN-LAST:event_filterbtnActionPerformed
 
     private void savebtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_savebtnActionPerformed
-
+        if(isCapturing==true)
+        {
+            int n = JOptionPane.showConfirmDialog(this,"stop capturing ?","An Inane Question",JOptionPane.YES_NO_OPTION);
+            if(n==0)
+            {wt.terminate(); }
+        }
+        
+        
         
     }//GEN-LAST:event_savebtnActionPerformed
 
     private void loadbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadbtnActionPerformed
-        StringBuilder errbuf = new StringBuilder();  
-        Pcap pcap = Pcap.openOffline("udp-wireshark-trace.pcap", errbuf);  
-
+//        new FileChooser().setVisible(true);
+        
+        StringBuilder errbuf = new StringBuilder();
+        Pcap pcap = Pcap.openOffline("captured-packets.cap", errbuf);
         PcapPacketHandler<String> handler = new PcapPacketHandler<String>() 
-        {  
+        {
+            @Override
             public void nextPacket(PcapPacket packet, String user) 
-            {  
-                myPacket.printToPacketGUI(PacketGUI.this, packet);
-            }  
+                { printToPacketGUI(packet);}
         };
-
-        pcap.loop(1, handler, "jNetPcap rocks!");  
-
-        pcap.close();  
+        pcap.loop(-1, handler, "jNetPcap rocks!");
+        pcap.close();
     }//GEN-LAST:event_loadbtnActionPerformed
 
     private void exitbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_exitbtnActionPerformed
-        int choice = JOptionPane.showConfirmDialog(this,"Do you want to save before exit?","An Inane Question",JOptionPane.YES_NO_OPTION);        
-        
-        //jOptionPane returns 0=>yes  1=>no -1=>closed box
-        if (choice==0)
+        if(isCapturing==true)  //if user still capturing, 1-ask if he wants to stop capturing or not. 2-if yes,ask if he wants to save
         {
-            this.setVisible(false);
-            System.exit(0);
+            int choice = JOptionPane.showConfirmDialog(this,"stop capturing ?","An Inane Question",JOptionPane.YES_NO_OPTION);        
+            //jOptionPane returns 0=>yes  1=>no -1=>closed box
+            if (choice==0)
+            {
+                wt.terminate();
+                int choice2 = JOptionPane.showConfirmDialog(this,"Do you want to save before exit?","An Inane Question",JOptionPane.YES_NO_OPTION);        
+                //jOptionPane returns 0=>yes  1=>no -1=>closed box
+                if (choice2==0)
+                {
+                    this.setVisible(false);
+                    System.exit(0);
+                }
+                if(choice2==1)
+                {
+                    this.setVisible(false);
+                    capturedPacketsFile.delete();
+                    //delete captured-packets file 
+                    System.exit(0);
+                }
+            }
         }
-        if(choice==1)
+        else   //if user already stopped capturing, then ask immediately if he wants to save or not
         {
-            File f=new File("captured-packets.cap");
-            f.delete();
-            //delete captured-packets file 
-            this.setVisible(false);
-            System.exit(0);
-            return;
+            int choice2 = JOptionPane.showConfirmDialog(this,"Do you want to save before exit?","An Inane Question",JOptionPane.YES_NO_OPTION);        
+            //jOptionPane returns 0=>yes  1=>no -1=>closed box
+            if (choice2==0)
+            {
+                this.setVisible(false);
+                System.exit(0);
+            }
+            if(choice2==1)
+            {
+                this.setVisible(false);
+                capturedPacketsFile.delete();
+                //delete captured-packets file 
+                System.exit(0);
+            }
         }
         
     }//GEN-LAST:event_exitbtnActionPerformed
 
-    
-    
+    private void filterboxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_filterboxActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_filterboxActionPerformed
+    private void setCapturedPacketsFile()
+    {
+        capturedPacketsFile=wt.getOutputFile();
+    }
+    public void printToPacketGUI(PcapPacket p)
+    {
+        Date date = new Date(p.getCaptureHeader().timestampInMillis());
+        Ethernet ethernet=new Ethernet();
+        Arp arp=new Arp();
+        Ip4 ip =new Ip4();
+        Tcp tcp=new Tcp();
+        Udp udp= new Udp();
+        Http http=new Http();
+        String num=(Integer.toString(number));
+        String len=new String();
+        String info=new String();
+        String src=new String(),dest=new String(),protocol=new String() ; 
+        byte[] tempByte= new byte[4]; StringBuilder sb=new StringBuilder();
+        JBuffer payloadBuffer = new JBuffer(4);
+        
+        String time=Long.toString(date.getTime());
+        if(p.hasHeader(ethernet))
+        {
+            protocol="ethernet";
+            info += p.getHeader(ethernet).toString();
+            
+            tempByte=ethernet.source();
+            for (byte c : tempByte) {
+               sb.append(String.format("%02X ", c));
+            }
+            src=sb.toString();
 
+            tempByte=ethernet.destination();
+            for (byte c : tempByte) {
+               sb.append(String.format("%02X ", c));
+            }
+            dest=sb.toString();
+            
+            payloadBuffer = p.getHeader(new Payload());
+            System.out.println(payloadBuffer);
+        }
+        info+="\n";
+        
+        if(p.hasHeader(arp))
+        {
+            protocol="ARP";
+            info += p.getHeader(arp).toString();
+            
+            tempByte = arp.sha();
+            for (byte c : tempByte) {
+               sb.append(String.format("%02X ", c));
+            }
+            src=sb.toString();
+            
+            tempByte = arp.tha();
+            for (byte c : tempByte) {
+               sb.append(String.format("%02X ", c));
+            }
+            dest=sb.toString();
+            
+            payloadBuffer = p.getHeader(new Payload());
+            System.out.println(payloadBuffer);
+        }
+        info+="\n"; 
+        
+        if(p.hasHeader(ip))
+        {  
+            protocol="IP";
+            info +=p.getHeader(ip).toString();
+            
+            tempByte=ip.source();
+            src= org.jnetpcap.packet.format.FormatUtils.ip(tempByte);
+
+            tempByte=ip.destination();
+            dest = org.jnetpcap.packet.format.FormatUtils.ip(tempByte);
+
+            payloadBuffer = p.getHeader(new Payload());
+            System.out.println(payloadBuffer);
+        }
+        info+="\n";
+        
+        if(p.hasHeader(tcp))
+        {
+            protocol="TCP";
+            info+=p.getHeader(tcp);
+        }
+        info+="\n";
+        
+        if(p.hasHeader(udp))
+        {
+            protocol="UDP";
+            info+=p.getHeader(udp);
+        }
+        info+="\n";
+        
+        if(p.hasHeader(http))
+        {
+            protocol ="HTTP";
+            info+=p.getHeader(http).toString();
+        }
+        String payload =new String();
+        if((p.getHeader(new Payload())!=null))
+        {
+            payload=p.getHeader( new Payload()).toString();
+        }
+        
+        Integer packetSize=p.size();
+        len=Integer.toString(packetSize);
+        insertInPacketTable(num,time,src,dest,protocol,len,info,payload);
+        number++;
+    }
+    
+    public void insertInPacketTable(String num, String time, String src, String dest, String protocol, String len, String info, String data1) 
+    {
+       DefaultTableModel dtm=(DefaultTableModel) packetstbl.getModel();
+       dtm.addRow(new Object[]{num,time,src,dest,protocol,len,info,data1});
+    }
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton capbtn;
     private javax.swing.JButton exitbtn;

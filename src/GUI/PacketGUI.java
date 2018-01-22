@@ -5,6 +5,7 @@ import javax.swing.JOptionPane;
 import Datatypes.WorkingThread;
 import java.io.File;
 import java.util.Date;
+import javax.swing.JFileChooser;
 import javax.swing.table.DefaultTableModel;
 import org.jnetpcap.Pcap;
 import org.jnetpcap.PcapIf;
@@ -27,6 +28,7 @@ public class PacketGUI extends javax.swing.JFrame {
     WorkingThread wt;
     File capturedPacketsFile;
     boolean isCapturing;
+    boolean isSaved;
     int number=1;
     
     public PacketGUI(int i,PcapIf ni,StringBuilder errbuf) {
@@ -37,6 +39,7 @@ public class PacketGUI extends javax.swing.JFrame {
         Integer i1=i;
         interfacetxt.setText("interface "+i1.toString());
         isCapturing=false;
+        isSaved=false;
     }
 
     @SuppressWarnings("unchecked")
@@ -443,6 +446,7 @@ public class PacketGUI extends javax.swing.JFrame {
     private void savebtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_savebtnActionPerformed
         if(isCapturing==true)
         {
+            isSaved=true;
             int n = JOptionPane.showConfirmDialog(this,"stop capturing ?","An Inane Question",JOptionPane.YES_NO_OPTION);
             if(n==0)
             {wt.terminate(); }
@@ -453,10 +457,16 @@ public class PacketGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_savebtnActionPerformed
 
     private void loadbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_loadbtnActionPerformed
-//        new FileChooser().setVisible(true);
-        
+       final JFileChooser fc= new JFileChooser();
+       int returnValue=fc.showOpenDialog(this);
+       String  fileName= new String();
+       
+       if(returnValue== JFileChooser.APPROVE_OPTION)
+           fileName=fc.getSelectedFile().getName();
+        System.out.println(fileName);
+
         StringBuilder errbuf = new StringBuilder();
-        Pcap pcap = Pcap.openOffline("captured-packets.cap", errbuf);
+        Pcap pcap = Pcap.openOffline(fileName, errbuf);
         PcapPacketHandler<String> handler = new PcapPacketHandler<String>() 
         {
             @Override
@@ -468,13 +478,19 @@ public class PacketGUI extends javax.swing.JFrame {
     }//GEN-LAST:event_loadbtnActionPerformed
 
     private void exitbtnActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_exitbtnActionPerformed
+        int choice=0;
         if(isCapturing==true)  //if user still capturing, 1-ask if he wants to stop capturing or not. 2-if yes,ask if he wants to save
         {
-            int choice = JOptionPane.showConfirmDialog(this,"stop capturing ?","An Inane Question",JOptionPane.YES_NO_OPTION);        
+            choice = JOptionPane.showConfirmDialog(this,"stop capturing ?","An Inane Question",JOptionPane.YES_NO_OPTION);        
             //jOptionPane returns 0=>yes  1=>no -1=>closed box
             if (choice==0)
-            {
                 wt.terminate();
+        }
+        
+        if(choice==0 )
+        {
+            if(!isSaved)
+            {
                 int choice2 = JOptionPane.showConfirmDialog(this,"Do you want to save before exit?","An Inane Question",JOptionPane.YES_NO_OPTION);        
                 //jOptionPane returns 0=>yes  1=>no -1=>closed box
                 if (choice2==0)
@@ -490,25 +506,7 @@ public class PacketGUI extends javax.swing.JFrame {
                     System.exit(0);
                 }
             }
-        }
-        else   //if user already stopped capturing, then ask immediately if he wants to save or not
-        {
-            int choice2 = JOptionPane.showConfirmDialog(this,"Do you want to save before exit?","An Inane Question",JOptionPane.YES_NO_OPTION);        
-            //jOptionPane returns 0=>yes  1=>no -1=>closed box
-            if (choice2==0)
-            {
-                this.setVisible(false);
-                System.exit(0);
-            }
-            if(choice2==1)
-            {
-                this.setVisible(false);
-                capturedPacketsFile.delete();
-                //delete captured-packets file 
-                System.exit(0);
-            }
-        }
-        
+        }    
     }//GEN-LAST:event_exitbtnActionPerformed
 
     private void filterboxActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_filterboxActionPerformed
